@@ -22,6 +22,16 @@ def SIFT_OPENCV():
 		cv.waitKey()
 		cv.destroyAllWindows()
 
+
+def normalize(img):
+	normImg = np.ndarray(img.shape, np.float64)
+
+	max = img.max()
+	if max > 0:
+		normImg = img/float(max)
+
+	return normImg
+
 def downscale(img):
 	assert(len(img.shape) == 2)
 	rows, cols = img.shape
@@ -33,7 +43,7 @@ def downscale(img):
 
 	return scaledImg
 
-def getGaussianKernel(sigma=1.6, kernelHeight=51, kernelWidth=51):
+def getGaussianKernel(sigma, kernelHeight=51, kernelWidth=51):
 	assert(kernelHeight % 2 == 1 and kernelWidth % 2 == 1)
 
 	yOffset = (kernelHeight - 1) / 2
@@ -76,14 +86,14 @@ def calcGaussianPyramid(org_img):
 
 	return gp
 
-def calcDifference(img1, img2, threshold = 0):
-	#return cv.absdiff(img1, img2);
-	#return abs(img2-img1)
-	diffImg = np.ndarray(img1.shape, np.uint8)
+def calcDifference(img0, img1, threshold = 0):
+	#return cv.absdiff(img0, img1);
+	#return abs(img1-img0)
+	diffImg = np.ndarray(img0.shape, np.uint8)
 
 	for y in range(diffImg.shape[0]):
 		for x in range(diffImg.shape[1]):
-			difference = abs(int(img2[y][x]) - int(img1[y][x]))
+			difference = abs(int(img1[y][x]) - int(img0[y][x]))
 			if difference > threshold:
 				diffImg[y][x] = difference
 			else:
@@ -99,22 +109,41 @@ def calcDoG(gp):
 	sigmaCount = 3
 
 	for i in range(len(gp)-1):
-		gauss1 = gp[i]
-		gauss2 = gp[i+1]
+		gauss0 = gp[i]
+		gauss1 = gp[i+1]
 
-		if (gauss1.shape == gauss2.shape):
-			DoG.append(calcDifference(gauss1, gauss2))
+		if (gauss0.shape == gauss1.shape):
+			DoG.append(calcDifference(gauss0, gauss1))
 
 	return DoG
 
-def normalize(img):
-	normImg = np.ndarray(img.shape, np.float64)
+def isMaxima(value, diff0, diff1, diff2):
+	return True
 
-	max = img.max()
-	if max > 0:
-		normImg = img/float(max)
+def isMinima(value, diff0, diff1, diff2):
+	return False
 
-	return normImg
+def calcExtrema(DoG):
+	keypoints = []
+
+	sigma = 1.6
+	sigmaCount = 3
+
+	for o in range(len(DoG)):
+		for s in range(1, len(DoG[o])-1):
+			diff0 = DoG[o][s-1]
+			diff1 = DoG[o][s]
+			diff2 = DoG[o][s+1]
+
+			assert(diff0.shape == diff1.shape and diff1.shape == diff2.shape)
+
+			# -1 --> ignore borders
+			for y in range(1, diff1.shape[0]-1):
+				for x in range(1, diff1.shape[1]-1):
+					if isMaxima(diff1[y][x], diff0[y-1 : y+1, x-1:x+1], None, None) or isMinima():
+						k = 2**(float(s)/float(sigmaCount))
+						keypoints.append((y, x, k*2*o*sigma)) #pos and scale
+
 
 
 def SIFT():
@@ -124,6 +153,8 @@ def SIFT():
 
 		gp = calcGaussianPyramid(img)
 		DoG = calcDoG(gp)
+
+		keypoint = calcExtrema(DoG)
 
 		for img in DoG:
 			cv.imshow("SIFT", normalize(img))
