@@ -1,27 +1,9 @@
 import cv2 as cv
 import numpy as np
-import os
+import sys
 
-PATH = ".\\test2\\"
 PI = 3.14159265
 E = 2.71828182
-
-def SIFT_OPENCV():
-	for filename in os.listdir(PATH):
-		print filename
-		img = cv.imread(PATH+filename, cv.IMREAD_GRAYSCALE)
-
-		sift = cv.SIFT()
-
-		kp = sift.detect(img, None)
-
-		img = cv.drawKeypoints(img, kp, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-
-		cv.imshow("SIFT", img)
-
-		cv.waitKey()
-		cv.destroyAllWindows()
-
 
 def normalize(img):
 	normImg = np.ndarray(shape=img.shape, dtype=np.float64)
@@ -176,9 +158,13 @@ def drawKeypoints(img, kp):
 	return kpImg
 
 def SIFT():
-	for filename in os.listdir(PATH):
+	if len(sys.argv) < 2:
+		print("Give the filename as an argument")
+	else:
+		filename = sys.argv[1]
 		print filename
-		img = cv.imread(PATH+filename, cv.IMREAD_GRAYSCALE)
+		# print '/'+PATH+'/'+filename
+		img = cv.imread(filename, cv.IMREAD_GRAYSCALE)
 
 		gp = calcGaussianPyramid(img)
 		DoG = calcDoG(gp)
@@ -193,7 +179,7 @@ def SIFT():
 
 				cv.imshow("SIFT", drawKeypoints(normalize(scale(DoG[o][s], 2**o)), kp))
 
-				cv.waitKey()
+				cv.waitKey(2000)
 				cv.destroyAllWindows()
 		
 		cv.imshow("SIFT", kpImg)
@@ -205,6 +191,4 @@ def SIFT():
 
 
 if __name__ == "__main__":
-	SIFT_OPENCV()
 	SIFT()
-	#SIFT_OPENCV()
